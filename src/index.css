@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* Warm cream background inspired by paper */
+    --background: 40 33% 96%;
+    --foreground: 20 30% 20%;
+
+    /* Cards with slightly lighter cream */
+    --card: 40 40% 98%;
+    --card-foreground: 20 30% 20%;
+
+    --popover: 40 40% 98%;
+    --popover-foreground: 20 30% 20%;
+
+    /* Terracotta/rust primary from logo */
+    --primary: 16 42% 46%;
+    --primary-foreground: 40 33% 96%;
+
+    /* Soft sand secondary */
+    --secondary: 35 30% 90%;
+    --secondary-foreground: 20 30% 25%;
+
+    /* Muted tones */
+    --muted: 35 20% 92%;
+    --muted-foreground: 20 15% 45%;
+
+    /* Warm accent */
+    --accent: 25 50% 85%;
+    --accent-foreground: 20 30% 20%;
+
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 30 20% 85%;
+    --input: 30 20% 85%;
+    --ring: 16 42% 46%;
+
+    --radius: 0.75rem;
+
+    /* Custom tokens */
+    --shadow-warm: 0 4px 20px -4px hsl(20 30% 20% / 0.08);
+    --shadow-card: 0 2px 12px -2px hsl(20 30% 20% / 0.06);
+    --gradient-paper: linear-gradient(180deg, hsl(40 40% 98%) 0%, hsl(40 33% 96%) 100%);
+
+    --sidebar-background: 40 33% 96%;
+    --sidebar-foreground: 20 30% 20%;
+    --sidebar-primary: 16 42% 46%;
+    --sidebar-primary-foreground: 40 33% 96%;
+    --sidebar-accent: 35 30% 90%;
+    --sidebar-accent-foreground: 20 30% 25%;
+    --sidebar-border: 30 20% 85%;
+    --sidebar-ring: 16 42% 46%;
+  }
+
+  .dark {
+    --background: 20 25% 12%;
+    --foreground: 40 30% 92%;
+
+    --card: 20 20% 16%;
+    --card-foreground: 40 30% 92%;
+
+    --popover: 20 20% 16%;
+    --popover-foreground: 40 30% 92%;
+
+    --primary: 18 50% 55%;
+    --primary-foreground: 20 25% 10%;
+
+    --secondary: 20 15% 22%;
+    --secondary-foreground: 40 30% 90%;
+
+    --muted: 20 15% 20%;
+    --muted-foreground: 35 15% 60%;
+
+    --accent: 25 30% 25%;
+    --accent-foreground: 40 30% 92%;
+
+    --destructive: 0 60% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 20 15% 25%;
+    --input: 20 15% 25%;
+    --ring: 18 50% 55%;
+
+    --sidebar-background: 20 25% 12%;
+    --sidebar-foreground: 40 30% 92%;
+    --sidebar-primary: 18 50% 55%;
+    --sidebar-primary-foreground: 20 25% 10%;
+    --sidebar-accent: 20 15% 22%;
+    --sidebar-accent-foreground: 40 30% 90%;
+    --sidebar-border: 20 15% 25%;
+    --sidebar-ring: 18 50% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Amiri', 'Playfair Display', serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Playfair Display', 'Amiri', serif;
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out forwards;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out forwards;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

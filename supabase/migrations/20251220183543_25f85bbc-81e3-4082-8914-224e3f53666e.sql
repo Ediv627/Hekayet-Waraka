@@ -1,0 +1,4 @@
+-- Add description and discount columns to products table
+ALTER TABLE public.products 
+ADD COLUMN IF NOT EXISTS description text,
+ADD COLUMN IF NOT EXISTS discount numeric DEFAULT 0;
