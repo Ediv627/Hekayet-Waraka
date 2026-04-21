@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useProducts } from "@/context/ProductContext";
+import { ProductVariant } from "@/types/product";
 import { useCategories } from "@/context/CategoryContext";
 import { useAuth } from "@/context/AuthContext";
 import { Product } from "@/types/product";
@@ -91,6 +92,7 @@ const Admin = () => {
     addProduct,
     updateProduct,
     deleteProduct,
+    saveVariants,
     isLoading: productsLoading,
   } = useProducts();
   const {
@@ -114,6 +116,9 @@ const Admin = () => {
   const [categoryImageUploading, setCategoryImageUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [productImages, setProductImages] = useState<string[]>([]);
+  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [isAvailable, setIsAvailable] = useState(true);
+  const [stockCount, setStockCount] = useState<string>("");
   const { saveImages, fetchImages } = useProductImages(editingProduct?.id);
   const [storeEmail, setStoreEmail] = useState("");
   const [storePhone, setStorePhone] = useState("");
@@ -285,6 +290,9 @@ const Admin = () => {
       discount: 0,
     });
     setProductImages([]);
+    setVariants([]);
+    setIsAvailable(true);
+    setStockCount("");
     setDialogOpen(true);
   };
 
@@ -297,7 +305,41 @@ const Admin = () => {
       description: product.description || "",
       discount: product.discount || 0,
     });
+    setVariants(
+      product.variants ? product.variants.map((v) => ({ ...v })) : [],
+    );
+    setIsAvailable(product.isAvailable !== false);
+    setStockCount(
+      product.stockCount === null || product.stockCount === undefined
+        ? ""
+        : String(product.stockCount),
+    );
     setDialogOpen(true);
+  };
+
+  const addVariant = () => {
+    setVariants((prev) => [...prev, { label: "", price: 0 }]);
+  };
+
+  const updateVariant = (
+    index: number,
+    field: "label" | "price",
+    value: string,
+  ) => {
+    setVariants((prev) =>
+      prev.map((v, i) =>
+        i === index
+          ? {
+              ...v,
+              [field]: field === "price" ? parseFloat(value) || 0 : value,
+            }
+          : v,
+      ),
+    );
+  };
+
+  const removeVariant = (index: number) => {
+    setVariants((prev) => prev.filter((_, i) => i !== index));
   };
 
   const onSubmit = async (data: ProductFormData) => {
@@ -306,6 +348,23 @@ const Admin = () => {
       // Check if at least one image is required for new products
       if (!editingProduct && productImages.length === 0) {
         toast.error("يرجى إضافة صورة واحدة على الأقل للمنتج");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Validate variants: any non-empty label must have valid price
+      for (const v of variants) {
+        if (v.label.trim().length > 0 && (isNaN(v.price) || v.price < 0)) {
+          toast.error(`سعر الحجم "${v.label}" غير صحيح`);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      const parsedStock =
+        stockCount.trim() === "" ? null : parseInt(stockCount, 10);
+      if (parsedStock !== null && (isNaN(parsedStock) || parsedStock < 0)) {
+        toast.error("عدد القطع يجب أن يكون رقم صحيح موجب");
         setIsSubmitting(false);
         return;
       }
@@ -321,10 +380,14 @@ const Admin = () => {
           categoryId: data.categoryId || undefined,
           description: data.description || undefined,
           discount: data.discount || 0,
+          isAvailable,
+          stockCount: parsedStock,
         });
 
         // Save multiple images
         await saveImages(editingProduct.id, productImages);
+        // Save variants
+        await saveVariants(editingProduct.id, variants);
         toast.success("تم تحديث المنتج بنجاح");
       } else {
         // First add the product to get the ID
@@ -337,6 +400,8 @@ const Admin = () => {
             category_id: data.categoryId || null,
             description: data.description || null,
             discount: data.discount || 0,
+            is_available: isAvailable,
+            stock_count: parsedStock,
           })
           .select()
           .single();
@@ -347,11 +412,18 @@ const Admin = () => {
         if (newProduct && productImages.length > 0) {
           await saveImages(newProduct.id, productImages);
         }
+        // Save variants
+        if (newProduct) {
+          await saveVariants(newProduct.id, variants);
+        }
         toast.success("تم إضافة المنتج بنجاح");
       }
       setDialogOpen(false);
       form.reset();
       setProductImages([]);
+      setVariants([]);
+      setIsAvailable(true);
+      setStockCount("");
     } catch (error) {
       console.error("Error:", error);
       toast.error("حدث خطأ أثناء العملية");
@@ -1515,6 +1587,104 @@ const Admin = () => {
                       onChange={setProductImages}
                       disabled={isSubmitting}
                     />
+
+                    {/* Variants section */}
+                    <div className="space-y-3 rounded-lg border border-border p-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-medium text-sm">أحجام المنتج</h4>
+                          <p className="text-xs text-muted-foreground">
+                            اختياري — اتركها فارغة لاستخدام السعر الأساسي
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={addVariant}
+                          className="gap-1"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          إضافة حجم
+                        </Button>
+                      </div>
+                      {variants.length > 0 && (
+                        <div className="space-y-2">
+                          {variants.map((v, idx) => (
+                            <div key={idx} className="flex gap-2 items-start">
+                              <Input
+                                placeholder="مثال: A4"
+                                value={v.label}
+                                onChange={(e) =>
+                                  updateVariant(idx, "label", e.target.value)
+                                }
+                                dir="rtl"
+                                className="flex-1"
+                              />
+                              <Input
+                                type="number"
+                                step="0.01"
+                                placeholder="السعر"
+                                value={isNaN(v.price) ? "" : v.price}
+                                onChange={(e) =>
+                                  updateVariant(idx, "price", e.target.value)
+                                }
+                                className="w-28"
+                              />
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => removeVariant(idx)}
+                                className="h-10 w-10 text-destructive hover:bg-destructive/10"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Stock section */}
+                    <div className="space-y-3 rounded-lg border border-border p-3">
+                      <h4 className="font-medium text-sm">حالة المخزون</h4>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">
+                          {isAvailable ? "متوفر" : "غير متوفر"}
+                        </span>
+                        <Switch
+                          checked={isAvailable}
+                          onCheckedChange={setIsAvailable}
+                        />
+                      </div>
+                      {isAvailable && (
+                        <div className="space-y-1">
+                          <label className="text-xs text-muted-foreground">
+                            عدد القطع المتاحة (اختياري — فارغ = غير محدود)
+                          </label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="مثال: 5"
+                            value={stockCount}
+                            onChange={(e) => setStockCount(e.target.value)}
+                          />
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {!isAvailable
+                          ? "غير متوفر الآن"
+                          : stockCount.trim() === ""
+                            ? "متوفر — كمية غير محدودة"
+                            : `متوفر — ${parseInt(stockCount, 10) || 0} قطع${
+                                (parseInt(stockCount, 10) || 0) <= 5
+                                  ? " فقط"
+                                  : ""
+                              }`}
+                      </p>
+                    </div>
 
                     <div className="flex gap-3 pt-4">
                       <Button

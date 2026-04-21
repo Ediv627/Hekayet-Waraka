@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { Product, CartItem } from '@/types/product';
+import React, { createContext, useContext, useState, useCallback } from "react";
+import { Product, CartItem, ProductVariant } from "@/types/product";
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  addToCart: (product: Product, variant?: ProductVariant) => void;
+  removeFromCart: (cartKey: string) => void;
+  updateQuantity: (cartKey: string, quantity: number) => void;
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
@@ -13,36 +13,61 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const buildCartKey = (productId: string, variant?: ProductVariant) =>
+  variant ? `${productId}::${variant.id ?? variant.label}` : productId;
+
+const itemKey = (item: CartItem) => buildCartKey(item.id, item.selectedVariant);
+
+export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  const addToCart = useCallback((product: Product) => {
-    setItems((prevItems) => {
-      const existingItem = prevItems.find((item) => item.id === product.id);
-      if (existingItem) {
-        return prevItems.map((item) =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      }
-      return [...prevItems, { ...product, quantity: 1 }];
-    });
+  const addToCart = useCallback(
+    (product: Product, variant?: ProductVariant) => {
+      setItems((prevItems) => {
+        const key = buildCartKey(product.id, variant);
+        const existingItem = prevItems.find((item) => itemKey(item) === key);
+        if (existingItem) {
+          return prevItems.map((item) =>
+            itemKey(item) === key
+              ? { ...item, quantity: item.quantity + 1 }
+              : item,
+          );
+        }
+        // If a variant is provided, override the price with the variant price
+        const effectivePrice = variant ? variant.price : product.price;
+        return [
+          ...prevItems,
+          {
+            ...product,
+            price: effectivePrice,
+            quantity: 1,
+            selectedVariant: variant,
+          },
+        ];
+      });
+    },
+    [],
+  );
+
+  const removeFromCart = useCallback((cartKey: string) => {
+    setItems((prevItems) =>
+      prevItems.filter((item) => itemKey(item) !== cartKey),
+    );
   }, []);
 
-  const removeFromCart = useCallback((productId: string) => {
-    setItems((prevItems) => prevItems.filter((item) => item.id !== productId));
-  }, []);
-
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
+  const updateQuantity = useCallback((cartKey: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      setItems((prev) => prev.filter((item) => itemKey(item) !== cartKey));
       return;
     }
     setItems((prevItems) =>
       prevItems.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
-      )
+        itemKey(item) === cartKey ? { ...item, quantity } : item,
+      ),
     );
-  }, [removeFromCart]);
+  }, []);
 
   const clearCart = useCallback(() => {
     setItems([]);
@@ -74,7 +99,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {
-    throw new Error('useCart must be used within a CartProvider');
+    throw new Error("useCart must be used within a CartProvider");
   }
   return context;
 };
+
+export const getCartItemKey = (item: CartItem): string =>
+  item.selectedVariant
+    ? `${item.id}::${item.selectedVariant.id ?? item.selectedVariant.label}`
+    : item.id;

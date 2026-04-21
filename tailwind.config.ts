@@ -2,7 +2,12 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -14,8 +19,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        serif: ['Playfair Display', 'Amiri', 'serif'],
-        arabic: ['Amiri', 'serif'],
+        serif: ["Playfair Display", "Amiri", "serif"],
+        arabic: ["Amiri", "serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -50,6 +55,14 @@ export default {
         card: {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
+        },
+        "stock-available": {
+          DEFAULT: "hsl(var(--stock-available))",
+          foreground: "hsl(var(--stock-available-foreground))",
+        },
+        "stock-urgent": {
+          DEFAULT: "hsl(var(--stock-urgent))",
+          foreground: "hsl(var(--stock-urgent-foreground))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",

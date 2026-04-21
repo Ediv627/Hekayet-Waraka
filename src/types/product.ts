@@ -6,6 +6,13 @@ export interface Category {
   has_offer: boolean;
 }
 
+export interface ProductVariant {
+  id?: string;
+  label: string;
+  price: number;
+  displayOrder?: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -15,13 +22,17 @@ export interface Product {
   description?: string;
   categoryId?: string;
   discount?: number;
+  isAvailable?: boolean;
+  stockCount?: number | null;
+  variants?: ProductVariant[];
 }
 
 export interface CartItem extends Product {
   quantity: number;
+  selectedVariant?: ProductVariant;
 }
 
-export type PaymentMethod = 'cod' | 'vodafone_cash';
+export type PaymentMethod = "cod" | "vodafone_cash";
 
 export interface DeliveryAddress {
   governorate: string;
