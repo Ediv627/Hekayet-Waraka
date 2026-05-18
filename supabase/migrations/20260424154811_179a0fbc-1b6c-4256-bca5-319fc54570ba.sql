@@ -1,0 +1,1 @@
+UPDATE public.store_settings SET value = '10', updated_at = now() WHERE key = 'new_arrivals_count';
