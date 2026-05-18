@@ -1,18 +1,18 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import useEmblaCarousel from 'embla-carousel-react';
-import Autoplay from 'embla-carousel-autoplay';
-import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
-import { useCategories } from '@/context/CategoryContext';
-import { cn } from '@/lib/utils';
+import { useEffect, useState, useCallback } from "react";
+import { Link } from "react-router-dom";
+import useEmblaCarousel from "embla-carousel-react";
+import Autoplay from "embla-carousel-autoplay";
+import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
+import { useCategories } from "@/context/CategoryContext";
+import { cn } from "@/lib/utils";
 
 const CategoryCarousel = () => {
   const { categories, isLoading } = useCategories();
-  const visibleCategories = categories.filter(c => c.image_url);
+  const visibleCategories = categories.filter((c) => c.image_url);
 
   const [emblaRef, emblaApi] = useEmblaCarousel(
-    { loop: true, align: 'center', slidesToScroll: 1 },
-    [Autoplay({ delay: 5000, stopOnInteraction: true })]
+    { loop: true, align: "center", slidesToScroll: 1 },
+    [Autoplay({ delay: 5000, stopOnInteraction: true })],
   );
 
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -27,9 +27,11 @@ const CategoryCarousel = () => {
     if (!emblaApi) return;
     setScrollSnaps(emblaApi.scrollSnapList());
     onSelect();
-    emblaApi.on('select', onSelect);
-    emblaApi.on('reInit', onSelect);
-    return () => { emblaApi.off('select', onSelect); };
+    emblaApi.on("select", onSelect);
+    emblaApi.on("reInit", onSelect);
+    return () => {
+      emblaApi.off("select", onSelect);
+    };
   }, [emblaApi, onSelect]);
 
   if (isLoading || visibleCategories.length === 0) return null;
@@ -40,7 +42,7 @@ const CategoryCarousel = () => {
         {/* Section Header */}
         <div className="text-center mb-10">
           <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-primary">
-            اكتشف مجموعاتنا
+            اكتشف مجموعتنا
           </h2>
         </div>
 
@@ -119,10 +121,10 @@ const CategoryCarousel = () => {
                 onClick={() => emblaApi?.scrollTo(index)}
                 aria-label={`الانتقال إلى ${index + 1}`}
                 className={cn(
-                  'rounded-full transition-all duration-300',
+                  "rounded-full transition-all duration-300",
                   index === selectedIndex
-                    ? 'w-8 h-2.5 bg-primary'
-                    : 'w-2.5 h-2.5 bg-muted-foreground/30 hover:bg-muted-foreground/60'
+                    ? "w-8 h-2.5 bg-primary"
+                    : "w-2.5 h-2.5 bg-muted-foreground/30 hover:bg-muted-foreground/60",
                 )}
               />
             ))}
@@ -134,4 +136,3 @@ const CategoryCarousel = () => {
 };
 
 export default CategoryCarousel;
-
