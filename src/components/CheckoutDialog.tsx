@@ -69,6 +69,13 @@ const checkoutSchema = z
       .min(11, "رقم الهاتف يجب أن يكون 11 رقم")
       .max(11, "رقم الهاتف يجب أن يكون 11 رقم")
       .regex(egyptianPhoneRegex, "أدخل رقم هاتف مصري صحيح (01xxxxxxxxx)"),
+    phoneAlt: z
+      .string()
+      .optional()
+      .or(z.literal(""))
+      .refine((v) => !v || egyptianPhoneRegex.test(v), {
+        message: "أدخل رقم هاتف مصري صحيح (01xxxxxxxxx)",
+      }),
     deliveryMethod: z.enum(["delivery", "pickup"]),
     governorate: z.string().optional(),
     city: z.string().optional(),
@@ -149,6 +156,7 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
     defaultValues: {
       customerName: "",
       phone: "",
+      phoneAlt: "",
       deliveryMethod: "delivery",
       governorate: "",
       city: "",
@@ -339,15 +347,21 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
       fileInputRef.current.value = "";
     }
   };
+
   const sendTelegramNotifications = async (
     orderId: string,
     customerName: string,
     phone: string,
+    phoneAlt: string | undefined,
     finalTotal: number,
   ) => {
     try {
       const botToken = "8999092152:AAFfm_zxJ_K7bC1fqY3UIF10a9I7anJn5nM";
       const Groupid = "-1003665055874";
+
+      const altPhoneLine = phoneAlt
+        ? `\n📞 رقم بديل:\n${phoneAlt}`
+        : "";
 
       const message = encodeURIComponent(
         `🛒 طلب جديد
@@ -355,7 +369,7 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
 👤 العميل: ${customerName}
 
 📞 رقم الهاتف:
-${phone}
+${phone}${altPhoneLine}
 
 🧾 رقم الطلب:
 ${orderId}
@@ -383,6 +397,7 @@ ${finalTotal.toFixed(2)} جنيه`,
       console.error("Error sending Telegram notification:", error);
     }
   };
+
   const onSubmit = async (data: CheckoutFormData) => {
     // Validate availability of items in cart against latest product data
     const unavailableItems = items.filter((item) => {
@@ -532,6 +547,7 @@ ${finalTotal.toFixed(2)} جنيه`,
         id: orderId,
         customer_name: data.customerName,
         customer_phone: data.phone,
+        customer_phone_alt: data.phoneAlt || null,
         governorate: isPickup ? "استلام من الفرع" : data.governorate || "",
         city: isPickup ? "استلام من الفرع" : data.city || "",
         full_address: isPickup ? "استلام من الفرع" : data.address || "",
@@ -578,12 +594,16 @@ ${finalTotal.toFixed(2)} جنيه`,
       }
 
       console.log("Order saved successfully:", orderId);
+
+      // Send Telegram notification (including alt phone if provided)
       sendTelegramNotifications(
         orderId,
         data.customerName,
         data.phone,
+        data.phoneAlt || undefined,
         finalTotal,
       );
+
       setSubmittedOrder({ id: orderId, phone: data.phone });
       setOrderSent(true);
 
@@ -631,8 +651,8 @@ ${finalTotal.toFixed(2)} جنيه`,
             </p>
 
             {submittedOrder && (
-              <div className="w-full rounded-lg border-2 border-dashed border-primary/40 bg-primary/5 p-4 mb-3 text-right">
-                <p className="text-xs font-bold text-primary mb-2">
+              <div className="w-full rounded-lg border-2 border-dashed border-primary/50 bg-primary/5 p-5 mb-3 text-right">
+                <p className="text-base sm:text-lg font-extrabold text-primary mb-3 leading-relaxed">
                   ⚠️ مهم جداً: احفظ رقم الطلب ده عشان تقدر تتبع طلبك
                 </p>
                 <div className="flex items-center justify-between gap-2 bg-background rounded-md p-2">
@@ -838,6 +858,34 @@ ${finalTotal.toFixed(2)} جنيه`,
                           {...field}
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="phoneAlt"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-right block">
+                        رقم بديل{" "}
+                        <span className="text-muted-foreground text-xs font-normal">
+                          (اختياري)
+                        </span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="01xxxxxxxxx"
+                          className="text-right"
+                          dir="ltr"
+                          {...field}
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        💡 ضيف رقم تاني (قريب/صاحب) عشان نقدر نوصلك لو الرقم
+                        الأساسي مش متاح
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}
