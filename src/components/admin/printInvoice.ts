@@ -17,6 +17,7 @@ interface PrintOrder {
   id: string;
   customer_name: string;
   customer_phone: string;
+  customer_phone_alt?: string | null;
   governorate: string;
   city: string;
   full_address: string;
@@ -102,6 +103,7 @@ function buildInvoiceBody(order: PrintOrder, adminMessage: string): string {
     <div class="grid">
       <p><span class="label">الاسم:</span> ${escapeHtml(order.customer_name)}</p>
       <p><span class="label">الهاتف:</span> ${escapeHtml(order.customer_phone)}</p>
+      ${order.customer_phone_alt ? `<p><span class="label">رقم بديل:</span> ${escapeHtml(order.customer_phone_alt)}</p>` : ''}
       <p><span class="label">المحافظة:</span> ${escapeHtml(order.governorate)}</p>
       <p><span class="label">المدينة:</span> ${escapeHtml(order.city)}</p>
       <p style="grid-column: 1 / -1"><span class="label">العنوان:</span> ${escapeHtml(order.full_address)}</p>
