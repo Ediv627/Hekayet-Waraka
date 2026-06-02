@@ -86,6 +86,7 @@ interface Order {
   id: string;
   customer_name: string;
   customer_phone: string;
+  customer_phone_alt?: string | null;
   governorate: string;
   city: string;
   full_address: string;
@@ -505,6 +506,25 @@ const OrdersManagement = () => {
                                 واتساب
                               </button>
                             </p>
+                            {order.customer_phone_alt && (
+                              <p className="flex items-center gap-2 flex-wrap">
+                                <span className="text-muted-foreground">رقم بديل:</span>
+                                <a href={`tel:${order.customer_phone_alt}`} className="hover:underline" dir="ltr">{order.customer_phone_alt}</a>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    e.preventDefault();
+                                    openWhatsapp(order.customer_phone_alt!, order.id);
+                                  }}
+                                  className="inline-flex items-center gap-1 rounded-full bg-[#25D366] px-2.5 py-1 text-[11px] font-medium text-white hover:opacity-90 transition"
+                                  aria-label="تواصل عبر واتساب على الرقم البديل"
+                                >
+                                  <MessageCircle className="h-3.5 w-3.5" fill="currentColor" />
+                                  واتساب
+                                </button>
+                              </p>
+                            )}
                             <p><span className="text-muted-foreground">العنوان:</span> {order.city}، {order.governorate}</p>
                             <p className="text-xs text-muted-foreground">{order.full_address}</p>
                             <p>
@@ -703,6 +723,24 @@ const OrdersManagement = () => {
                       تواصل واتساب
                     </button>
                   </p>
+                  {selectedOrder.customer_phone_alt && (
+                    <p className="flex items-center gap-2 flex-wrap">
+                      <span className="text-muted-foreground">رقم بديل:</span>
+                      <a href={`tel:${selectedOrder.customer_phone_alt}`} className="hover:underline" dir="ltr">{selectedOrder.customer_phone_alt}</a>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          openWhatsapp(selectedOrder.customer_phone_alt!, selectedOrder.id);
+                        }}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-[#25D366] px-3 py-1 text-xs font-medium text-white hover:opacity-90 transition"
+                        aria-label="تواصل عبر واتساب على الرقم البديل"
+                      >
+                        <MessageCircle className="h-4 w-4" fill="currentColor" />
+                        تواصل واتساب
+                      </button>
+                    </p>
+                  )}
                   <p><span className="text-muted-foreground">المحافظة:</span> {selectedOrder.governorate}</p>
                   <p><span className="text-muted-foreground">المدينة:</span> {selectedOrder.city}</p>
                   <p><span className="text-muted-foreground">العنوان:</span> {selectedOrder.full_address}</p>
