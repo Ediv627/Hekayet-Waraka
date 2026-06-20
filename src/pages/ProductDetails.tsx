@@ -203,16 +203,16 @@ const ProductDetails = () => {
             {/* Product Info */}
             <div className="flex flex-col justify-center space-y-4 sm:space-y-6">
               <div>
-                <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-2 sm:mb-3">
+                <h1 dir="rtl" className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-2 sm:mb-3 bidi-plaintext">
                   {product.name}
                 </h1>
                 {product.shortDescription && (
-                  <p className="text-sm sm:text-base text-muted-foreground/90 mb-2">
+                  <p dir="rtl" className="text-sm sm:text-base text-muted-foreground/90 mb-2 bidi-plaintext">
                     {product.shortDescription}
                   </p>
                 )}
                 {product.description && (
-                  <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
+                  <p dir="rtl" className="text-base sm:text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap bidi-plaintext">
                     {product.description}
                   </p>
                 )}
