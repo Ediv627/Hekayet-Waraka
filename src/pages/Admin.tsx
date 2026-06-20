@@ -1229,7 +1229,7 @@ const Admin = () => {
                         <FormItem>
                           <FormLabel>اسم المنتج</FormLabel>
                           <FormControl>
-                            <Input placeholder="مثال: دفتر فاخر" dir="rtl" {...field} />
+                            <Input placeholder="مثال: دفتر فاخر" dir="rtl" className="bidi-plaintext" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -1398,7 +1398,7 @@ const Admin = () => {
                           <FormLabel>وصف المنتج</FormLabel>
                           <FormControl>
                             <textarea 
-                              className="w-full min-h-[60px] sm:min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                              className="w-full min-h-[60px] sm:min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none bidi-plaintext"
                               placeholder="أدخل وصف المنتج..."
                               dir="rtl"
                               {...field}
@@ -1420,6 +1420,7 @@ const Admin = () => {
                               placeholder="مثال: دفتر فاخر بأوراق سميكة"
                               maxLength={100}
                               dir="rtl"
+                              className="bidi-plaintext"
                               {...field}
                             />
                           </FormControl>
@@ -1578,7 +1579,7 @@ const Admin = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <span className="font-medium text-sm block truncate">{product.name}</span>
+                              <span dir="rtl" className="font-medium text-sm block truncate bidi-plaintext">{product.name}</span>
                               <span className="text-xs text-muted-foreground">{getCategoryName(product.categoryId)}</span>
                             </div>
                             <div className="flex gap-1 shrink-0">
@@ -1645,10 +1646,10 @@ const Admin = () => {
                               />
                             </td>
                             <td className="py-3">
-                              <div>
-                                <span className="font-medium">{product.name}</span>
+                              <div dir="rtl">
+                                <span className="font-medium bidi-plaintext">{product.name}</span>
                                 {product.description && (
-                                  <p className="text-xs text-muted-foreground truncate max-w-[200px]">{product.description}</p>
+                                  <p className="text-xs text-muted-foreground truncate max-w-[200px] bidi-plaintext">{product.description}</p>
                                 )}
                               </div>
                             </td>
@@ -1706,4 +1707,3 @@ const Admin = () => {
 };
 
 export default Admin;
-
