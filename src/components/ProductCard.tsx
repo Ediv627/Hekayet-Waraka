@@ -84,11 +84,11 @@ const ProductCard = ({ product }: ProductCardProps) => {
         {/* Content */}
         <div className="p-3 md:p-4 space-y-2 md:space-y-3">
           <div className="space-y-0.5 md:space-y-1">
-            <h3 className="font-serif text-sm md:text-lg font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors duration-300">
+            <h3 dir="rtl" className="font-serif text-sm md:text-lg font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors duration-300 bidi-plaintext">
               {product.name}
             </h3>
             {product.shortDescription && (
-              <p className="text-[11px] md:text-xs text-muted-foreground line-clamp-1 leading-relaxed">
+              <p dir="rtl" className="text-[11px] md:text-xs text-muted-foreground line-clamp-1 leading-relaxed bidi-plaintext">
                 {product.shortDescription}
               </p>
             )}
