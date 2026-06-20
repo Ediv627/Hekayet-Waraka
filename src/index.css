@@ -167,7 +167,3 @@
     transform: scale(1);
   }
 }
-
-.bidi-plaintext {
-  unicode-bidi: plaintext;
-}
