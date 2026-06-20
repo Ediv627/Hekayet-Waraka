@@ -167,3 +167,8 @@
     transform: scale(1);
   }
 }
+
+/* Mixed Arabic/Latin text: keep typed order in RTL contexts */
+.bidi-plaintext {
+  unicode-bidi: plaintext;
+}
