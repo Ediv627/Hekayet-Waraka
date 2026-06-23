@@ -92,6 +92,7 @@ interface Order {
   full_address: string;
   payment_method: string;
   payment_amount_type?: string;
+  remaining_amount_received?: boolean;
   transfer_image_url: string | null;
   subtotal: number;
   delivery_fee: number;
@@ -233,6 +234,26 @@ const OrdersManagement = () => {
     } catch (error) {
       console.error('Error updating order status:', error);
       toast.error('حدث خطأ أثناء تحديث الحالة');
+    }
+  };
+
+  const toggleRemainingReceived = async (orderId: string, received: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ remaining_amount_received: received })
+        .eq('id', orderId);
+      if (error) throw error;
+      setOrders(prev =>
+        prev.map(o => (o.id === orderId ? { ...o, remaining_amount_received: received } : o))
+      );
+      setSelectedOrder(prev =>
+        prev && prev.id === orderId ? { ...prev, remaining_amount_received: received } : prev
+      );
+      toast.success(received ? 'تم تسجيل استلام باقي المبلغ' : 'تم إلغاء تسجيل استلام باقي المبلغ');
+    } catch (error) {
+      console.error('Error updating remaining amount status:', error);
+      toast.error('حدث خطأ أثناء تحديث حالة الدفع');
     }
   };
 
@@ -551,9 +572,14 @@ const OrdersManagement = () => {
                                     <span className="text-muted-foreground">مدفوع الآن:</span>{' '}
                                     <span className="font-bold text-green-600">{b.paidNow.toFixed(2)} ج.م</span>
                                   </p>
-                                  <p>
+                                  <p className="flex items-center gap-1.5 flex-wrap">
                                     <span className="text-muted-foreground">المتبقي عند الاستلام:</span>{' '}
                                     <span className="font-bold text-orange-600">{b.remaining.toFixed(2)} ج.م</span>
+                                    {order.remaining_amount_received && (
+                                      <span className="inline-flex items-center gap-0.5 rounded-full bg-green-500/15 text-green-700 border border-green-500/30 px-1.5 py-0.5 text-[10px] font-bold">
+                                        <CheckCircle className="h-3 w-3" /> تم التحصيل
+                                      </span>
+                                    )}
                                   </p>
                                 </div>
                               );
@@ -566,24 +592,31 @@ const OrdersManagement = () => {
                           <h4 className="font-medium text-sm">المنتجات</h4>
                           <div className="space-y-1">
                             {order.items?.map((item) => {
-                              const itemPrice = item.product_discount
-                                ? item.product_price - item.product_discount
-                                : item.product_price;
+                              const unitPrice = item.product_discount
+                                ? Number(item.product_price) - Number(item.product_discount)
+                                : Number(item.product_price);
                               return (
-                                <div key={item.id} className="flex justify-between items-start gap-2 text-sm py-1.5 border-b border-border/50 last:border-0">
-                                  <span className="font-bold text-primary whitespace-nowrap">{(itemPrice * item.quantity).toFixed(2)} ج.م</span>
-                                  <div className="text-right flex-1">
-                                    <span className="font-medium">{item.product_name}</span>
-                                    <span className="text-muted-foreground"> × {item.quantity}</span>
-                                    {item.variant_label && (
-                                      <div className="mt-1 inline-flex items-center gap-2 rounded-md bg-primary/10 border-2 border-primary/30 px-2.5 py-1">
-                                        <span className="text-sm font-bold text-primary">📐 {item.variant_label}</span>
-                                        {item.variant_page_count != null && (
-                                          <span className="text-sm font-bold text-primary">• {item.variant_page_count} ورقة</span>
-                                        )}
-                                        <span className="text-sm font-bold text-primary">• {item.product_price} ج.م</span>
-                                      </div>
-                                    )}
+                                <div key={item.id} className="py-2 border-b border-border/50 last:border-0">
+                                  <div className="flex justify-between items-start gap-2 text-sm">
+                                    <span className="font-bold text-primary whitespace-nowrap">{(unitPrice * item.quantity).toFixed(2)} ج.م</span>
+                                    <div className="text-right flex-1">
+                                      <span className="font-medium">{item.product_name}</span>
+                                      <span className="text-muted-foreground"> × {item.quantity}</span>
+                                    </div>
+                                  </div>
+                                  <div className="mt-1.5 grid grid-cols-3 gap-1.5 text-xs">
+                                    <div className="rounded bg-muted/60 border border-border px-2 py-1 text-center">
+                                      <div className="text-[10px] text-muted-foreground">المقاس</div>
+                                      <div className="font-bold text-foreground">{item.variant_label || '—'}</div>
+                                    </div>
+                                    <div className="rounded bg-muted/60 border border-border px-2 py-1 text-center">
+                                      <div className="text-[10px] text-muted-foreground">عدد الأوراق</div>
+                                      <div className="font-bold text-foreground">{item.variant_page_count != null ? `${item.variant_page_count}` : '—'}</div>
+                                    </div>
+                                    <div className="rounded bg-primary/10 border border-primary/30 px-2 py-1 text-center">
+                                      <div className="text-[10px] text-muted-foreground">السعر</div>
+                                      <div className="font-bold text-primary">{unitPrice.toFixed(2)} ج.م</div>
+                                    </div>
                                   </div>
                                 </div>
                               );
@@ -769,29 +802,36 @@ const OrdersManagement = () => {
                 <h3 className="font-medium mb-3">المنتجات</h3>
                 <div className="space-y-2">
                   {selectedOrder.items?.map((item) => {
-                    const itemPrice = item.product_discount
-                      ? item.product_price - item.product_discount
-                      : item.product_price;
+                    const unitPrice = item.product_discount
+                      ? Number(item.product_price) - Number(item.product_discount)
+                      : Number(item.product_price);
                     return (
-                      <div key={item.id} className="flex justify-between items-start gap-3 p-3 rounded bg-muted/50 border border-border">
-                        <span className="font-bold text-primary whitespace-nowrap">{(itemPrice * item.quantity).toFixed(2)} ج.م</span>
-                        <div className="text-right flex-1">
-                          <span className="font-medium">{item.product_name}</span>
-                          <span className="text-muted-foreground"> × {item.quantity}</span>
-                          {item.product_discount > 0 && (
-                            <span className="text-xs text-green-600 mr-2">
-                              (خصم {item.product_discount} ج.م)
-                            </span>
-                          )}
-                          {item.variant_label && (
-                            <div className="mt-2 inline-flex items-center gap-2 rounded-lg bg-primary/10 border-2 border-primary/30 px-3 py-1.5">
-                              <span className="text-base font-bold text-primary">📐 {item.variant_label}</span>
-                              {item.variant_page_count != null && (
-                                <span className="text-base font-bold text-primary">• {item.variant_page_count} ورقة</span>
-                              )}
-                              <span className="text-base font-bold text-primary">• {item.product_price} ج.م</span>
-                            </div>
-                          )}
+                      <div key={item.id} className="p-3 rounded bg-muted/50 border border-border space-y-2">
+                        <div className="flex justify-between items-start gap-3">
+                          <span className="font-bold text-primary whitespace-nowrap">{(unitPrice * item.quantity).toFixed(2)} ج.م</span>
+                          <div className="text-right flex-1">
+                            <span className="font-medium">{item.product_name}</span>
+                            <span className="text-muted-foreground"> × {item.quantity}</span>
+                            {item.product_discount > 0 && (
+                              <span className="text-xs text-green-600 mr-2">
+                                (خصم {item.product_discount} ج.م)
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-sm">
+                          <div className="rounded-md bg-background border border-border px-2 py-1.5 text-center">
+                            <div className="text-[11px] text-muted-foreground">المقاس</div>
+                            <div className="font-bold text-foreground">{item.variant_label || '—'}</div>
+                          </div>
+                          <div className="rounded-md bg-background border border-border px-2 py-1.5 text-center">
+                            <div className="text-[11px] text-muted-foreground">عدد الأوراق</div>
+                            <div className="font-bold text-foreground">{item.variant_page_count != null ? `${item.variant_page_count} ورقة` : '—'}</div>
+                          </div>
+                          <div className="rounded-md bg-primary/10 border border-primary/30 px-2 py-1.5 text-center">
+                            <div className="text-[11px] text-muted-foreground">السعر</div>
+                            <div className="font-bold text-primary">{unitPrice.toFixed(2)} ج.م</div>
+                          </div>
                         </div>
                       </div>
                     );
@@ -820,15 +860,33 @@ const OrdersManagement = () => {
                   const b = getAmountBreakdown(selectedOrder);
                   if (!b.isHalf) return null;
                   return (
-                    <div className="mt-3 rounded-lg border border-orange-500/30 bg-orange-500/5 p-3 space-y-1.5 text-sm">
+                    <div className="mt-3 rounded-lg border border-orange-500/30 bg-orange-500/5 p-3 space-y-2 text-sm">
                       <p className="font-medium mb-1">💰 تفاصيل الدفع الجزئي</p>
                       <div className="flex justify-between">
                         <span className="font-bold text-green-600">{b.paidNow.toFixed(2)} ج.م</span>
-                        <span className="text-muted-foreground">مدفوع عبر فودافون كاش (50%)</span>
+                        <span className="text-muted-foreground">المبلغ المدفوع (فودافون كاش 50%) ✅</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="font-bold text-orange-600">{b.remaining.toFixed(2)} ج.م</span>
-                        <span className="text-muted-foreground">المتبقي يُحصَّل عند الاستلام</span>
+                        <span className="text-muted-foreground">المبلغ المتبقي عند الاستلام ⏳</span>
+                      </div>
+                      <Separator />
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <Button
+                          size="sm"
+                          variant={selectedOrder.remaining_amount_received ? 'default' : 'outline'}
+                          className={selectedOrder.remaining_amount_received ? 'bg-green-600 hover:bg-green-700 text-white' : ''}
+                          onClick={() => toggleRemainingReceived(selectedOrder.id, !selectedOrder.remaining_amount_received)}
+                        >
+                          {selectedOrder.remaining_amount_received ? (
+                            <><CheckCircle className="h-4 w-4 ml-1" /> تم استلام باقي المبلغ</>
+                          ) : (
+                            <>تسجيل استلام باقي المبلغ</>
+                          )}
+                        </Button>
+                        <span className={`text-xs font-medium ${selectedOrder.remaining_amount_received ? 'text-green-600' : 'text-orange-600'}`}>
+                          {selectedOrder.remaining_amount_received ? 'تم التحصيل بالكامل' : 'في انتظار التحصيل'}
+                        </span>
                       </div>
                     </div>
                   );
