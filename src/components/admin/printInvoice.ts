@@ -60,20 +60,19 @@ function buildInvoiceBody(order: PrintOrder, adminMessage: string): string {
 
   const itemsHtml = (order.items || [])
     .map((it) => {
-      const price = it.product_discount
-        ? it.product_price - it.product_discount
-        : it.product_price;
-      const lineTotal = (price * it.quantity).toFixed(2);
-      const variant = it.variant_label
-        ? ` <span class="variant">📐 ${escapeHtml(it.variant_label)}${
-            it.variant_page_count != null ? ` • ${it.variant_page_count} ورقة` : ''
-          }</span>`
-        : '';
+      const unitPrice = it.product_discount
+        ? Number(it.product_price) - Number(it.product_discount)
+        : Number(it.product_price);
+      const lineTotal = (unitPrice * it.quantity).toFixed(2);
+      const sizeCell = it.variant_label ? escapeHtml(it.variant_label) : '—';
+      const pagesCell = it.variant_page_count != null ? `${it.variant_page_count} ورقة` : '—';
       return `
         <tr>
-          <td>${escapeHtml(it.product_name)}${variant}</td>
+          <td>${escapeHtml(it.product_name)}</td>
+          <td class="center">${sizeCell}</td>
+          <td class="center">${pagesCell}</td>
+          <td class="end">${unitPrice.toFixed(2)} ج.م</td>
           <td class="center">${it.quantity}</td>
-          <td class="end">${Number(it.product_price).toFixed(2)} ج.م</td>
           <td class="end bold">${lineTotal} ج.م</td>
         </tr>`;
     })
@@ -121,8 +120,10 @@ function buildInvoiceBody(order: PrintOrder, adminMessage: string): string {
       <thead>
         <tr>
           <th>المنتج</th>
-          <th class="center">الكمية</th>
+          <th class="center">المقاس</th>
+          <th class="center">عدد الأوراق</th>
           <th class="end">السعر</th>
+          <th class="center">الكمية</th>
           <th class="end">الإجمالي</th>
         </tr>
       </thead>
@@ -136,13 +137,15 @@ function buildInvoiceBody(order: PrintOrder, adminMessage: string): string {
       ${
         isHalf
           ? `<div class="partial">
-              <div class="row"><span>💳 مدفوع الآن (فودافون كاش)</span><span class="bold">${paidNow.toFixed(2)} ج.م</span></div>
-              <div class="row"><span>📦 المتبقي عند الاستلام</span><span class="bold">${remaining.toFixed(2)} ج.م</span></div>
+              <div class="row"><span>✅ المبلغ المدفوع (فودافون كاش)</span><span class="bold">${paidNow.toFixed(2)} ج.م</span></div>
+              <div class="row"><span>⏳ المبلغ المتبقي عند الاستلام</span><span class="bold">${remaining.toFixed(2)} ج.م</span></div>
+              <p class="reminder">⚠️ يُرجى دفع باقي المبلغ (${remaining.toFixed(2)} ج.م) نقداً عند استلام الطلب.</p>
             </div>`
           : ''
       }
     </div>
   </div>
+
 
   ${
     order.notes
@@ -230,6 +233,16 @@ const invoiceStyles = `
     padding: 8px;
     border-radius: 6px;
     font-size: 12px;
+  }
+  .partial .reminder {
+    margin: 6px 0 0;
+    padding: 6px 8px;
+    background: #fef3c7;
+    border-right: 3px solid #f59e0b;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #92400e;
   }
   .message {
     margin-top: 12px;
