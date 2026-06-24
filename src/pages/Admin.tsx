@@ -50,7 +50,7 @@ const Admin = () => {
   const [isAvailable, setIsAvailable] = useState(true);
   const [stockCount, setStockCount] = useState<string>('');
   const [isNewArrival, setIsNewArrival] = useState(false);
-  const [variants, setVariants] = useState<Array<{ id?: string; label: string; pageCount: string; price: string }>>([]);
+  const [variants, setVariants] = useState<Array<{ id?: string; label: string; pageCount: string; price: string; discount: string; promoText: string }>>([]);
   const { saveImages, fetchImages } = useProductImages(editingProduct?.id);
   const [storeEmail, setStoreEmail] = useState('');
   const [storePhone, setStorePhone] = useState('');
@@ -224,6 +224,8 @@ const Admin = () => {
         label: v.label,
         pageCount: v.pageCount != null ? String(v.pageCount) : '',
         price: String(v.price),
+        discount: v.discount ? String(v.discount) : '',
+        promoText: v.promoText || '',
       }))
     );
     setDialogOpen(true);
@@ -254,6 +256,8 @@ const Admin = () => {
         label: v.label.trim(),
         pageCount: v.pageCount.trim() === '' ? null : parseInt(v.pageCount, 10),
         price: parseFloat(v.price) || 0,
+        discount: v.discount.trim() === '' ? 0 : (parseFloat(v.discount) || 0),
+        promoText: v.promoText.trim() || null,
       }));
 
       for (const v of cleanedVariants) {
@@ -331,6 +335,8 @@ const Admin = () => {
             label: v.label,
             page_count: v.pageCount,
             price: v.price,
+            discount: v.discount,
+            promo_text: v.promoText,
             display_order: idx,
           }));
           const { error: variantError } = await supabase.from('product_variants').insert(insertRows);
@@ -1294,61 +1300,99 @@ const Admin = () => {
                           لم يتم إضافة مقاسات. سيتم استخدام السعر الأساسي للمنتج.
                         </p>
                       ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {variants.map((v, idx) => (
-                            <div key={idx} className="grid grid-cols-12 gap-2 items-end">
-                              <div className="col-span-4 space-y-1">
-                                <label className="text-xs text-muted-foreground">المقاس</label>
-                                <Input
-                                  placeholder="A4"
-                                  value={v.label}
-                                  onChange={(e) => {
-                                    const next = [...variants];
-                                    next[idx] = { ...next[idx], label: e.target.value };
-                                    setVariants(next);
-                                  }}
-                                />
+                            <div key={idx} className="rounded-md border border-border/60 p-3 space-y-2 bg-secondary/20">
+                              <div className="grid grid-cols-12 gap-2 items-end">
+                                <div className="col-span-4 space-y-1">
+                                  <label className="text-xs text-muted-foreground">المقاس</label>
+                                  <Input
+                                    placeholder="A4"
+                                    value={v.label}
+                                    onChange={(e) => {
+                                      const next = [...variants];
+                                      next[idx] = { ...next[idx], label: e.target.value };
+                                      setVariants(next);
+                                    }}
+                                  />
+                                </div>
+                                <div className="col-span-4 space-y-1">
+                                  <label className="text-xs text-muted-foreground">عدد الأوراق</label>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    placeholder="100"
+                                    value={v.pageCount}
+                                    onChange={(e) => {
+                                      const next = [...variants];
+                                      next[idx] = { ...next[idx], pageCount: e.target.value };
+                                      setVariants(next);
+                                    }}
+                                  />
+                                </div>
+                                <div className="col-span-3 space-y-1">
+                                  <label className="text-xs text-muted-foreground">السعر</label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="50"
+                                    value={v.price}
+                                    onChange={(e) => {
+                                      const next = [...variants];
+                                      next[idx] = { ...next[idx], price: e.target.value };
+                                      setVariants(next);
+                                    }}
+                                  />
+                                </div>
+                                <div className="col-span-1">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 text-destructive hover:bg-destructive/10"
+                                    onClick={() => setVariants(variants.filter((_, i) => i !== idx))}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="col-span-4 space-y-1">
-                                <label className="text-xs text-muted-foreground">عدد الأوراق</label>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  placeholder="100"
-                                  value={v.pageCount}
-                                  onChange={(e) => {
-                                    const next = [...variants];
-                                    next[idx] = { ...next[idx], pageCount: e.target.value };
-                                    setVariants(next);
-                                  }}
-                                />
+                              <div className="grid grid-cols-12 gap-2 items-end">
+                                <div className="col-span-4 space-y-1">
+                                  <label className="text-xs text-muted-foreground">خصم هذا المقاس (ج.م)</label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0"
+                                    value={v.discount}
+                                    onChange={(e) => {
+                                      const next = [...variants];
+                                      next[idx] = { ...next[idx], discount: e.target.value };
+                                      setVariants(next);
+                                    }}
+                                  />
+                                </div>
+                                <div className="col-span-8 space-y-1">
+                                  <label className="text-xs text-muted-foreground">نص العرض (اختياري — يظهر بجانب المقاس)</label>
+                                  <Input
+                                    placeholder="عرض خاص! اشترِ 2 واحصل على 1"
+                                    value={v.promoText}
+                                    onChange={(e) => {
+                                      const next = [...variants];
+                                      next[idx] = { ...next[idx], promoText: e.target.value };
+                                      setVariants(next);
+                                    }}
+                                  />
+                                </div>
                               </div>
-                              <div className="col-span-3 space-y-1">
-                                <label className="text-xs text-muted-foreground">السعر</label>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  placeholder="50"
-                                  value={v.price}
-                                  onChange={(e) => {
-                                    const next = [...variants];
-                                    next[idx] = { ...next[idx], price: e.target.value };
-                                    setVariants(next);
-                                  }}
-                                />
-                              </div>
-                              <div className="col-span-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-9 w-9 text-destructive hover:bg-destructive/10"
-                                  onClick={() => setVariants(variants.filter((_, i) => i !== idx))}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              {(parseFloat(v.discount) > 0 || v.promoText.trim()) && (
+                                <p className="text-[11px] text-primary">
+                                  {parseFloat(v.discount) > 0 && `السعر بعد الخصم: ${(parseFloat(v.price) - parseFloat(v.discount)).toFixed(2)} ج.م`}
+                                  {parseFloat(v.discount) > 0 && v.promoText.trim() && ' — '}
+                                  {v.promoText.trim()}
+                                </p>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -1359,13 +1403,14 @@ const Admin = () => {
                         size="sm"
                         className="w-full gap-2"
                         onClick={() =>
-                          setVariants([...variants, { label: '', pageCount: '', price: '' }])
+                          setVariants([...variants, { label: '', pageCount: '', price: '', discount: '', promoText: '' }])
                         }
                       >
                         <Plus className="h-4 w-4" />
                         إضافة مقاس
                       </Button>
                     </div>
+
 
                     <FormField
                       control={form.control}
