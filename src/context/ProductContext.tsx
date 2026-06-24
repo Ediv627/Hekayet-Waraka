@@ -37,6 +37,8 @@ export const ProductProvider: React.FC<{ children: React.ReactNode }> = ({ child
           pageCount: v.page_count,
           price: Number(v.price),
           displayOrder: v.display_order,
+          discount: v.discount ? Number(v.discount) : 0,
+          promoText: v.promo_text || null,
         });
       });
 
