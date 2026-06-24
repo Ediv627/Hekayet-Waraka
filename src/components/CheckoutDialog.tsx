@@ -260,6 +260,51 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
     }
   };
 
+  const sendTelegramNotifications = async (
+    orderId: string,
+    customerName: string,
+    phone: string,
+    finalTotal: number,
+  ) => {
+    try {
+      const botToken = "8999092152:AAFfm_zxJ_K7bC1fqY3UIF10a9I7anJn5nM";
+      const Groupid = "-4998600576";
+
+      const message = encodeURIComponent(
+        `🛒 طلب جديد
+
+👤 العميل: ${customerName}
+
+📞 رقم الهاتف:
+${phone}
+
+🧾 رقم الطلب:
+${orderId}
+
+💰 الإجمالي:
+${finalTotal.toFixed(2)} جنيه`,
+      );
+
+      const url =
+        `https://api.telegram.org/bot${botToken}/sendMessage` +
+        `?chat_id=${Groupid}` +
+        `&text=${message}`;
+
+      const response = await fetch(url);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Telegram Error:", data);
+        return;
+      }
+
+      console.log("Telegram message sent:", data);
+    } catch (error) {
+      console.error("Error sending Telegram notification:", error);
+    }
+  };
+  
   const onSubmit = async (data: CheckoutFormData) => {
     // Validate availability of items in cart against latest product data
     const unavailableItems = items.filter((item) => {
@@ -434,6 +479,12 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
       }
 
       console.log('Order saved successfully:', orderId);
+      sendTelegramNotifications(
+        orderId,
+        data.customerName,
+        data.phone,
+        finalTotal,
+      );
       setSubmittedOrder({ id: orderId, phone: data.phone });
       setOrderSent(true);
       clearCart();
