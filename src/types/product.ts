@@ -12,6 +12,8 @@ export interface ProductVariant {
   pageCount?: number | null;
   price: number;
   displayOrder: number;
+  discount?: number;
+  promoText?: string | null;
 }
 
 export interface Product {
