@@ -119,8 +119,12 @@ const ProductDetails = () => {
   };
 
   const basePrice = hasVariants && selectedVariant ? selectedVariant.price : (product?.price || 0);
-  const finalPrice = product?.discount ? basePrice - product.discount : basePrice;
-  const hasDiscount = product?.discount && product.discount > 0;
+  const effectiveDiscount = hasVariants && selectedVariant && selectedVariant.discount && selectedVariant.discount > 0
+    ? selectedVariant.discount
+    : (product?.discount || 0);
+  const finalPrice = effectiveDiscount ? basePrice - effectiveDiscount : basePrice;
+  const hasDiscount = effectiveDiscount > 0;
+  const promoText = selectedVariant?.promoText || null;
 
   if (isLoading) {
     return (
@@ -242,13 +246,19 @@ const ProductDetails = () => {
                     <span className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary">{finalPrice} ج.م</span>
                     <span className="text-lg sm:text-xl text-muted-foreground line-through">{basePrice} ج.م</span>
                     <span className="bg-destructive/10 text-destructive px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium">
-                      وفر {product.discount} ج.م
+                      وفر {effectiveDiscount} ج.م
                     </span>
                   </>
                 ) : (
                   <span className="text-2xl sm:text-3xl md:text-4xl font-bold text-primary">{basePrice} ج.م</span>
                 )}
               </div>
+
+              {promoText && (
+                <div className="rounded-lg bg-primary/10 border border-primary/30 px-4 py-3 text-primary font-semibold text-sm sm:text-base">
+                  🎁 {promoText}
+                </div>
+              )}
 
               {/* Variant Selector */}
               {hasVariants && (
@@ -257,17 +267,24 @@ const ProductDetails = () => {
                   <div className="flex flex-wrap gap-2">
                     {product.variants!.map((v) => {
                       const isSelected = selectedVariantId === v.id;
+                      const vHasDiscount = !!(v.discount && v.discount > 0);
+                      const vFinal = vHasDiscount ? v.price - (v.discount || 0) : v.price;
                       return (
                         <button
                           key={v.id}
                           type="button"
                           onClick={() => setSelectedVariantId(v.id)}
-                          className={`flex flex-col items-center px-4 py-2 rounded-lg border-2 transition-all min-w-[80px] ${
+                          className={`relative flex flex-col items-center px-4 py-2 rounded-lg border-2 transition-all min-w-[90px] ${
                             isSelected
                               ? 'border-primary bg-primary text-primary-foreground shadow-md'
                               : 'border-border bg-background hover:border-primary/50'
                           }`}
                         >
+                          {vHasDiscount && (
+                            <span className="absolute -top-2 -left-2 bg-destructive text-destructive-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow">
+                              -{v.discount} ج.م
+                            </span>
+                          )}
                           <span className="font-bold text-base">{v.label}</span>
                           {v.pageCount ? (
                             <span className={`text-xs ${isSelected ? 'opacity-90' : 'text-muted-foreground'}`}>
@@ -275,7 +292,11 @@ const ProductDetails = () => {
                             </span>
                           ) : null}
                           <span className={`text-xs font-semibold ${isSelected ? 'opacity-95' : 'text-primary'}`}>
-                            {v.price} ج.م
+                            {vHasDiscount ? (
+                              <>{vFinal} <span className="line-through opacity-70">{v.price}</span> ج.م</>
+                            ) : (
+                              <>{v.price} ج.م</>
+                            )}
                           </span>
                         </button>
                       );
