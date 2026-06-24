@@ -268,7 +268,7 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
   ) => {
     try {
       const botToken = "8999092152:AAFfm_zxJ_K7bC1fqY3UIF10a9I7anJn5nM";
-      const Groupid = "-4998600576";
+      const Groupid = "-1003665055874";
 
       const message = encodeURIComponent(
         `🛒 طلب جديد
