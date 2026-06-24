@@ -39,8 +39,12 @@ const ProductCard = ({ product }: ProductCardProps) => {
   };
 
   const basePrice = hasVariants && selectedVariant ? selectedVariant.price : product.price;
-  const finalPrice = product.discount ? basePrice - product.discount : basePrice;
-  const hasDiscount = product.discount && product.discount > 0;
+  const effectiveDiscount = hasVariants && selectedVariant && selectedVariant.discount && selectedVariant.discount > 0
+    ? selectedVariant.discount
+    : (product.discount || 0);
+  const finalPrice = effectiveDiscount ? basePrice - effectiveDiscount : basePrice;
+  const hasDiscount = effectiveDiscount > 0;
+  const promoText = selectedVariant?.promoText || null;
 
   return (
     <Link to={`/product/${product.id}`} className="block">
@@ -60,7 +64,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
           
           {hasDiscount && !blocked && (
             <div className="absolute top-2 right-2 md:top-3 md:right-3 bg-destructive text-destructive-foreground text-[10px] md:text-xs font-bold px-2 md:px-3 py-1 md:py-1.5 rounded-full shadow-lg animate-pulse">
-              خصم {product.discount} ج.م
+              خصم {effectiveDiscount} ج.م
             </div>
           )}
 
@@ -99,6 +103,8 @@ const ProductCard = ({ product }: ProductCardProps) => {
             <div className="flex flex-wrap gap-2" onClick={(e) => e.preventDefault()}>
               {product.variants!.map((v) => {
                 const isSelected = selectedVariant?.id === v.id;
+                const vHasDiscount = !!(v.discount && v.discount > 0);
+                const vFinal = vHasDiscount ? v.price - (v.discount || 0) : v.price;
                 return (
                   <button
                     key={v.id}
@@ -109,12 +115,17 @@ const ProductCard = ({ product }: ProductCardProps) => {
                       setSelectedVariant(v);
                     }}
                     className={cn(
-                      "flex flex-col items-center justify-center px-3 md:px-4 py-2 md:py-2.5 rounded-lg border-2 transition-all min-w-[72px] md:min-w-[88px]",
+                      "relative flex flex-col items-center justify-center px-3 md:px-4 py-2 md:py-2.5 rounded-lg border-2 transition-all min-w-[72px] md:min-w-[88px]",
                       isSelected
                         ? "border-primary bg-primary text-primary-foreground shadow-md"
                         : "border-border bg-background hover:border-primary/50"
                     )}
                   >
+                    {vHasDiscount && (
+                      <span className="absolute -top-2 -left-2 bg-destructive text-destructive-foreground text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow">
+                        -{v.discount} ج.م
+                      </span>
+                    )}
                     <span className="font-bold text-sm md:text-base leading-tight">{v.label}</span>
                     {v.pageCount ? (
                       <span className={cn("text-[11px] md:text-xs leading-tight", isSelected ? "opacity-90" : "text-muted-foreground")}>
@@ -122,11 +133,23 @@ const ProductCard = ({ product }: ProductCardProps) => {
                       </span>
                     ) : null}
                     <span className={cn("text-[11px] md:text-xs font-semibold leading-tight mt-0.5", isSelected ? "opacity-90" : "text-muted-foreground")}>
-                      {v.price} ج.م
+                      {vHasDiscount ? (
+                        <>
+                          {vFinal} <span className={cn("line-through opacity-70", isSelected ? "" : "text-muted-foreground/70")}>{v.price}</span> ج.م
+                        </>
+                      ) : (
+                        <>{v.price} ج.م</>
+                      )}
                     </span>
                   </button>
                 );
               })}
+            </div>
+          )}
+
+          {promoText && (
+            <div className="text-[11px] md:text-xs bg-primary/10 text-primary font-medium px-2 py-1 rounded-md text-center">
+              🎁 {promoText}
             </div>
           )}
           
