@@ -30,7 +30,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
       }
       const effectivePrice = variant ? variant.price : product.price;
-      return [...prevItems, { ...product, price: effectivePrice, quantity: 1, selectedVariant: variant }];
+      const effectiveDiscount = variant && variant.discount && variant.discount > 0
+        ? variant.discount
+        : (product.discount || 0);
+      return [...prevItems, { ...product, price: effectivePrice, discount: effectiveDiscount, quantity: 1, selectedVariant: variant }];
     });
   }, []);
 
