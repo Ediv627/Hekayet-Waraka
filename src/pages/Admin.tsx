@@ -261,18 +261,19 @@ const Admin = () => {
       }));
 
       for (const v of cleanedVariants) {
-        if (!v.label) {
-          toast.error('من فضلك أدخل اسم المقاس لكل صف');
+        if (!v.label && v.pageCount === null) {
+          toast.error('من فضلك أدخل اسم المقاس أو عدد الأوراق على الأقل لكل صف');
           setIsSubmitting(false);
           return;
         }
+        const ident = v.label || (v.pageCount !== null ? `${v.pageCount} ورقة` : '');
         if (v.price <= 0) {
-          toast.error(`سعر المقاس "${v.label}" يجب أن يكون أكبر من 0`);
+          toast.error(`سعر المقاس "${ident}" يجب أن يكون أكبر من 0`);
           setIsSubmitting(false);
           return;
         }
         if (v.pageCount !== null && (isNaN(v.pageCount) || v.pageCount < 0)) {
-          toast.error(`عدد الأوراق للمقاس "${v.label}" غير صالح`);
+          toast.error(`عدد الأوراق للمقاس "${ident}" غير صالح`);
           setIsSubmitting(false);
           return;
         }
@@ -1293,7 +1294,7 @@ const Admin = () => {
                     <div className="space-y-3 rounded-lg border border-border p-3">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium text-sm">المقاسات والأحجام</h4>
-                        <span className="text-xs text-muted-foreground">اختياري</span>
+                        <span className="text-xs text-muted-foreground">اختياري — يكفي إدخال المقاس أو عدد الأوراق</span>
                       </div>
                       {variants.length === 0 ? (
                         <p className="text-xs text-muted-foreground">
