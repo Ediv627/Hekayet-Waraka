@@ -108,7 +108,7 @@ const ProductDetails = () => {
       addToCart(product, selectedVariant || undefined);
     }
     toast.success(`تمت إضافة ${quantity} إلى السلة`, {
-      description: selectedVariant ? `${product.name} — ${selectedVariant.label}` : product.name,
+      description: selectedVariant ? `${product.name} — ${selectedVariant.label || (selectedVariant.pageCount ? `${selectedVariant.pageCount} ورقة` : '')}` : product.name,
     });
     setQuantity(1);
   };
@@ -285,9 +285,11 @@ const ProductDetails = () => {
                               -{v.discount} ج.م
                             </span>
                           )}
-                          <span className="font-bold text-base">{v.label}</span>
+                          {v.label ? (
+                            <span className="font-bold text-base">{v.label}</span>
+                          ) : null}
                           {v.pageCount ? (
-                            <span className={`text-xs ${isSelected ? 'opacity-90' : 'text-muted-foreground'}`}>
+                            <span className={`${v.label ? 'text-xs' : 'font-bold text-base'} ${v.label ? (isSelected ? 'opacity-90' : 'text-muted-foreground') : ''}`}>
                               {v.pageCount} ورقة
                             </span>
                           ) : null}
