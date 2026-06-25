@@ -34,7 +34,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
     }
     addToCart(product, selectedVariant || undefined);
     toast.success('تمت الإضافة للسلة', {
-      description: selectedVariant ? `${product.name} — ${selectedVariant.label}` : product.name,
+      description: selectedVariant ? `${product.name} — ${selectedVariant.label || (selectedVariant.pageCount ? `${selectedVariant.pageCount} ورقة` : '')}` : product.name,
     });
   };
 
@@ -126,9 +126,11 @@ const ProductCard = ({ product }: ProductCardProps) => {
                         -{v.discount} ج.م
                       </span>
                     )}
-                    <span className="font-bold text-sm md:text-base leading-tight">{v.label}</span>
+                    {v.label ? (
+                      <span className="font-bold text-sm md:text-base leading-tight">{v.label}</span>
+                    ) : null}
                     {v.pageCount ? (
-                      <span className={cn("text-[11px] md:text-xs leading-tight", isSelected ? "opacity-90" : "text-muted-foreground")}>
+                      <span className={cn(v.label ? "text-[11px] md:text-xs leading-tight" : "font-bold text-sm md:text-base leading-tight", !v.label ? "" : (isSelected ? "opacity-90" : "text-muted-foreground"))}>
                         {v.pageCount} ورقة
                       </span>
                     ) : null}
