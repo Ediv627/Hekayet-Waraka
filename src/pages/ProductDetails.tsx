@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import SEOHead from '@/components/SEOHead';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ShoppingCart, Minus, Plus, Loader2, Package } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Minus, Plus, Loader2, Package, Link2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProducts } from '@/context/ProductContext';
 import { useCart } from '@/context/CartContext';
@@ -24,6 +24,20 @@ const ProductDetails = () => {
   const [productImages, setProductImages] = useState<string[]>([]);
   const [imagesLoading, setImagesLoading] = useState(true);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/product/${id}` : '';
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      toast.success('تم نسخ رابط المنتج');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('تعذّر النسخ، انسخ الرابط يدويًا');
+    }
+  };
 
   const product = products.find((p) => p.id === id);
   const hasVariants = !!(product?.variants && product.variants.length > 0);
@@ -331,6 +345,35 @@ const ProductDetails = () => {
                   </Button>
                 </div>
               </div>
+
+              {/* Short Product Link */}
+              <div className="rounded-lg border border-border/60 bg-secondary/30 p-3 space-y-2">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Link2 className="h-3.5 w-3.5" />
+                  رابط المنتج — شاركه مع أصدقائك
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={shareUrl}
+                    onFocus={(e) => e.target.select()}
+                    className="flex-1 min-w-0 bg-background border border-border rounded-md px-3 py-2 text-xs sm:text-sm text-foreground/80 truncate"
+                    dir="ltr"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={copied ? 'default' : 'outline'}
+                    onClick={handleCopyLink}
+                    className="gap-1.5 shrink-0"
+                  >
+                    {copied ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
+                    {copied ? 'تم النسخ' : 'نسخ'}
+                  </Button>
+                </div>
+              </div>
+
 
               {/* Add to Cart Button */}
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
