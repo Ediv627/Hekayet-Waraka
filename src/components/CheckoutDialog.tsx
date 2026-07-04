@@ -815,7 +815,7 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">
-                              لا - استخدم سعر التوصيل العام ({(deliveryFees[selectedGovernorate] ?? 0).toFixed(2)} ج.م)
+                              لا - استخدم سعر التوصيل العام ({(deliveryFees[subAreas] ?? 0).toFixed(2)} ج.م)
                             </SelectItem>
                             {subAreas.map((area) => (
                               <SelectItem key={area.area_name} value={area.area_name}>
