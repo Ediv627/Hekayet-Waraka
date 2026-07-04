@@ -189,11 +189,11 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
       setSelectedCityId('');
       setUseCustomCity(false);
 
-      // اختيار "بيلا" تلقائيًا كقيمة افتراضية لو موجودة ضمن مناطق المحافظة (مستوى المحافظة، بدون city_id)
+      // اختيار "مدينة بيلا" تلقائيًا كقيمة افتراضية لو موجودة ضمن مناطق المحافظة (مستوى المحافظة، بدون city_id)
       const defaultBellaArea = fetchedSubAreas.find(
-        (a) => a.area_name === 'بيلا' && !a.city_id
+        (a) => a.area_name === 'مدينة بيلا' && !a.city_id
       );
-      setSelectedSubArea(defaultBellaArea ? 'بيلا' : '');
+      setSelectedSubArea(defaultBellaArea ? 'مدينة بيلا' : '');
     };
     fetchGovernorateData();
   }, [selectedGovernorate]);
@@ -950,9 +950,9 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
                             {subAreas
                               .filter((a) => !a.city_id)
                               .sort((a, b) => {
-                                // اظهار "بيلا" في أول القائمة
-                                if (a.area_name === 'بيلا') return -1;
-                                if (b.area_name === 'بيلا') return 1;
+                                // اظهار "مدينة بيلا" في أول القائمة
+                                if (a.area_name === 'مدينة بيلا') return -1;
+                                if (b.area_name === 'مدينة بيلا') return 1;
                                 return 0;
                               })
                               .map((area) => (
