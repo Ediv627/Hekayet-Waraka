@@ -67,6 +67,14 @@ interface CheckoutDialogProps {
   onClose: () => void;
 }
 
+// NOTE: subAreas now also carries is_default so we know which one to
+// auto-select when the governorate changes.
+interface SubArea {
+  area_name: string;
+  fee: number;
+  is_default?: boolean;
+}
+
 const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
   const { items, totalPrice, clearCart, removeFromCart } = useCart();
   const { products } = useProducts();
@@ -91,7 +99,7 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
   const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState(0);
   const [deliveryFees, setDeliveryFees] = useState<Record<string, number>>({});
   const [vodafoneCashNumber, setVodafoneCashNumber] = useState(DEFAULT_VODAFONE_CASH_NUMBER);
-  const [subAreas, setSubAreas] = useState<{ area_name: string; fee: number }[]>([]);
+  const [subAreas, setSubAreas] = useState<SubArea[]>([]);
   const [selectedSubArea, setSelectedSubArea] = useState('');
   const [branchPickupEnabled, setBranchPickupEnabled] = useState(false);
   const [branchAddress, setBranchAddress] = useState('');
@@ -150,7 +158,9 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
     }
   }, [isPickup, form]);
 
-  // Fetch sub-areas when governorate changes
+  // Fetch sub-areas when governorate changes.
+  // If one of them is marked is_default, auto-select it instead of
+  // leaving the customer on "no sub-area / general price".
   useEffect(() => {
     const fetchSubAreas = async () => {
       if (!selectedGovernorate) {
@@ -160,15 +170,23 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
       }
       const { data } = await supabase
         .from('delivery_sub_areas')
-        .select('area_name, fee')
+        .select('area_name, fee, is_default')
         .eq('governorate', selectedGovernorate);
-      
+
       if (data && data.length > 0) {
-        setSubAreas(data.map(d => ({ area_name: d.area_name, fee: Number(d.fee) })));
+        const areas = data.map((d) => ({
+          area_name: d.area_name,
+          fee: Number(d.fee),
+          is_default: !!d.is_default,
+        }));
+        setSubAreas(areas);
+
+        const defaultArea = areas.find((a) => a.is_default);
+        setSelectedSubArea(defaultArea ? defaultArea.area_name : '');
       } else {
         setSubAreas([]);
+        setSelectedSubArea('');
       }
-      setSelectedSubArea('');
     };
     fetchSubAreas();
   }, [selectedGovernorate]);
@@ -800,7 +818,9 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
                       />
                     </div>
 
-                    {/* Sub-area optional override - governorate base fee applies by default */}
+                    {/* Sub-area optional override - governorate base fee applies by default,
+                        unless one of the sub-areas is marked as default (is_default),
+                        in which case it is pre-selected automatically above. */}
                     {subAreas.length > 0 && selectedGovernorate && (
                       <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
                         <label className="text-sm font-medium text-right block">
@@ -815,7 +835,7 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__none__">
-                              لا - استخدم سعر التوصيل العام ({(deliveryFees[subAreas] ?? 0).toFixed(2)} ج.م)
+                              لا - استخدم سعر التوصيل العام ({(deliveryFees[selectedGovernorate] ?? 0).toFixed(2)} ج.م)
                             </SelectItem>
                             {subAreas.map((area) => (
                               <SelectItem key={area.area_name} value={area.area_name}>
