@@ -70,8 +70,19 @@ interface CheckoutDialogProps {
 const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
   const { items, totalPrice, clearCart, removeFromCart } = useCart();
   const { products } = useProducts();
-  const [orderSent, setOrderSent] = useState(false);
-  const [submittedOrder, setSubmittedOrder] = useState<{ id: string; phone: string } | null>(null);
+  const [orderSent, setOrderSent] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return !!localStorage.getItem('hw_last_order_v1');
+  });
+  const [submittedOrder, setSubmittedOrder] = useState<{ id: string; phone: string } | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem('hw_last_order_v1');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [transferImage, setTransferImage] = useState<File | null>(null);
   const [transferImagePreview, setTransferImagePreview] = useState<string | null>(null);
@@ -86,20 +97,45 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
   const [branchAddress, setBranchAddress] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const FORM_DRAFT_KEY = 'hw_checkout_draft_v1';
+  const loadDraft = (): Partial<CheckoutFormData> => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const raw = localStorage.getItem(FORM_DRAFT_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  };
+  const draft = loadDraft();
+
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
-      customerName: '',
-      phone: '',
-      phoneAlt: '',
-      deliveryMethod: 'delivery',
-      governorate: '',
-      city: '',
-      address: '',
-      paymentMethod: 'vodafone_cash',
-      paymentAmountType: 'full',
+      customerName: draft.customerName || '',
+      phone: draft.phone || '',
+      phoneAlt: draft.phoneAlt || '',
+      deliveryMethod: draft.deliveryMethod || 'delivery',
+      governorate: draft.governorate || '',
+      city: draft.city || '',
+      address: draft.address || '',
+      paymentMethod: draft.paymentMethod || 'vodafone_cash',
+      paymentAmountType: draft.paymentAmountType || 'full',
     },
   });
+
+  // Persist form values to localStorage on every change (survives page reload / browser close)
+  useEffect(() => {
+    const sub = form.watch((values) => {
+      try {
+        localStorage.setItem(FORM_DRAFT_KEY, JSON.stringify(values));
+      } catch {
+        /* ignore */
+      }
+    });
+    return () => sub.unsubscribe();
+  }, [form]);
+
 
   const selectedGovernorate = useWatch({ control: form.control, name: 'governorate' });
   const selectedPaymentMethod = useWatch({ control: form.control, name: 'paymentMethod' });
@@ -140,17 +176,17 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
   // Check if free delivery applies
   const isFreeDelivery = freeDeliveryThreshold > 0 && totalPrice >= freeDeliveryThreshold;
   
-  // Calculate actual delivery fee based on governorate and sub-area
+  // Calculate actual delivery fee based on governorate and (optional) sub-area override
   const getDeliveryFee = () => {
     if (isPickup) return 0;
     if (isFreeDelivery) return 0;
     if (!selectedGovernorate) return 0;
-    if (subAreas.length > 0) {
-      if (!selectedSubArea) return 0;
-      const area = subAreas.find(a => a.area_name === selectedSubArea);
-      return area ? area.fee : 0;
+    const baseFee = deliveryFees[selectedGovernorate] ?? 0;
+    if (selectedSubArea) {
+      const area = subAreas.find((a) => a.area_name === selectedSubArea);
+      if (area) return area.fee;
     }
-    return deliveryFees[selectedGovernorate] ?? 0;
+    return baseFee;
   };
   const actualDeliveryFee = getDeliveryFee();
   
@@ -260,51 +296,6 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
     }
   };
 
-  const sendTelegramNotifications = async (
-    orderId: string,
-    customerName: string,
-    phone: string,
-    finalTotal: number,
-  ) => {
-    try {
-      const botToken = "8999092152:AAFfm_zxJ_K7bC1fqY3UIF10a9I7anJn5nM";
-      const Groupid = "-1003665055874";
-
-      const message = encodeURIComponent(
-        `🛒 طلب جديد
-
-👤 العميل: ${customerName}
-
-📞 رقم الهاتف:
-${phone}
-
-🧾 رقم الطلب:
-${orderId}
-
-💰 الإجمالي:
-${finalTotal.toFixed(2)} جنيه`,
-      );
-
-      const url =
-        `https://api.telegram.org/bot${botToken}/sendMessage` +
-        `?chat_id=${Groupid}` +
-        `&text=${message}`;
-
-      const response = await fetch(url);
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error("Telegram Error:", data);
-        return;
-      }
-
-      console.log("Telegram message sent:", data);
-    } catch (error) {
-      console.error("Error sending Telegram notification:", error);
-    }
-  };
-  
   const onSubmit = async (data: CheckoutFormData) => {
     // Validate availability of items in cart against latest product data
     const unavailableItems = items.filter((item) => {
@@ -479,14 +470,13 @@ ${finalTotal.toFixed(2)} جنيه`,
       }
 
       console.log('Order saved successfully:', orderId);
-      sendTelegramNotifications(
-        orderId,
-        data.customerName,
-        data.phone,
-        finalTotal,
-      );
-      setSubmittedOrder({ id: orderId, phone: data.phone });
+      const submitted = { id: orderId, phone: data.phone };
+      setSubmittedOrder(submitted);
       setOrderSent(true);
+      try {
+        localStorage.setItem('hw_last_order_v1', JSON.stringify(submitted));
+        localStorage.removeItem('hw_checkout_draft_v1');
+      } catch { /* ignore */ }
       clearCart();
     } catch (error) {
       console.error('Error submitting order:', error);
@@ -505,6 +495,9 @@ ${finalTotal.toFixed(2)} جنيه`,
       setTransferImagePreview(null);
       setSelectedSubArea('');
       setSubAreas([]);
+      try {
+        localStorage.removeItem('hw_last_order_v1');
+      } catch { /* ignore */ }
     }
     onClose();
   };
@@ -807,15 +800,23 @@ ${finalTotal.toFixed(2)} جنيه`,
                       />
                     </div>
 
-                    {/* Sub-area dropdown - only shown when governorate has sub-areas */}
-                    {subAreas.length > 0 && (
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-right block">المنطقة</label>
-                        <Select onValueChange={setSelectedSubArea} value={selectedSubArea}>
+                    {/* Sub-area optional override - governorate base fee applies by default */}
+                    {subAreas.length > 0 && selectedGovernorate && (
+                      <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                        <label className="text-sm font-medium text-right block">
+                          هل منطقتك من المناطق دي؟ <span className="text-xs font-normal text-muted-foreground">(اختياري - سعر توصيل مختلف)</span>
+                        </label>
+                        <Select
+                          onValueChange={(v) => setSelectedSubArea(v === '__none__' ? '' : v)}
+                          value={selectedSubArea || '__none__'}
+                        >
                           <SelectTrigger>
-                            <SelectValue placeholder="اختر المنطقة" />
+                            <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="__none__">
+                              لا - استخدم سعر التوصيل العام ({(deliveryFees[selectedGovernorate] ?? 0).toFixed(2)} ج.م)
+                            </SelectItem>
                             {subAreas.map((area) => (
                               <SelectItem key={area.area_name} value={area.area_name}>
                                 {area.area_name} - {area.fee} ج.م توصيل
