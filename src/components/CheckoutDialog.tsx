@@ -180,16 +180,20 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
       setCities(
         (citiesRes.data || []).map((c) => ({ id: c.id, city_name: c.city_name, fee: Number(c.fee) }))
       );
-      setSubAreas(
-        (subRes.data || []).map((d) => ({
-          area_name: d.area_name,
-          fee: Number(d.fee),
-          city_id: (d as { city_id: string | null }).city_id ?? null,
-        }))
-      );
+      const fetchedSubAreas = (subRes.data || []).map((d) => ({
+        area_name: d.area_name,
+        fee: Number(d.fee),
+        city_id: (d as { city_id: string | null }).city_id ?? null,
+      }));
+      setSubAreas(fetchedSubAreas);
       setSelectedCityId('');
-      setSelectedSubArea('');
       setUseCustomCity(false);
+
+      // اختيار "بيلا" تلقائيًا كقيمة افتراضية لو موجودة ضمن مناطق المحافظة (مستوى المحافظة، بدون city_id)
+      const defaultBellaArea = fetchedSubAreas.find(
+        (a) => a.area_name === 'بيلا' && !a.city_id
+      );
+      setSelectedSubArea(defaultBellaArea ? 'بيلا' : '');
     };
     fetchGovernorateData();
   }, [selectedGovernorate]);
