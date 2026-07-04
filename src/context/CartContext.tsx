@@ -17,26 +17,8 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const getCartItemKey = (item: CartItem | { id: string; selectedVariant?: ProductVariant }): string =>
   `${item.id}__${item.selectedVariant?.id || 'base'}`;
 
-const CART_STORAGE_KEY = 'hw_cart_items_v1';
-
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [items, setItems] = useState<CartItem[]>(() => {
-    if (typeof window === 'undefined') return [];
-    try {
-      const raw = localStorage.getItem(CART_STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as CartItem[]) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  React.useEffect(() => {
-    try {
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      /* ignore quota errors */
-    }
-  }, [items]);
+  const [items, setItems] = useState<CartItem[]>([]);
 
   const addToCart = useCallback((product: Product, variant?: ProductVariant) => {
     setItems((prevItems) => {
@@ -48,10 +30,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
       }
       const effectivePrice = variant ? variant.price : product.price;
-      const effectiveDiscount = variant && variant.discount && variant.discount > 0
-        ? variant.discount
-        : (product.discount || 0);
-      return [...prevItems, { ...product, price: effectivePrice, discount: effectiveDiscount, quantity: 1, selectedVariant: variant }];
+      return [...prevItems, { ...product, price: effectivePrice, quantity: 1, selectedVariant: variant }];
     });
   }, []);
 
