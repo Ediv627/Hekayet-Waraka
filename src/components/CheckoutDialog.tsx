@@ -943,16 +943,22 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="__none__">
-                              لا - استخدم سعر التوصيل العام ({(deliveryFees[selectedGovernorate] ?? 0).toFixed(2)} ج.م)
-                            </SelectItem>
                             {subAreas
                               .filter((a) => !a.city_id)
+                              .sort((a, b) => {
+                                // اظهار "بيلا" في أول القائمة
+                                if (a.area_name === 'بيلا') return -1;
+                                if (b.area_name === 'بيلا') return 1;
+                                return 0;
+                              })
                               .map((area) => (
                                 <SelectItem key={area.area_name} value={area.area_name}>
                                   {area.area_name} - {area.fee} ج.م توصيل
                                 </SelectItem>
                               ))}
+                            <SelectItem value="__none__">
+                              لا - استخدم سعر التوصيل العام ({(deliveryFees[selectedGovernorate] ?? 0).toFixed(2)} ج.م)
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
