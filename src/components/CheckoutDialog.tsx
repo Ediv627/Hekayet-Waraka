@@ -67,14 +67,6 @@ interface CheckoutDialogProps {
   onClose: () => void;
 }
 
-// NOTE: subAreas now also carries is_default so we know which one to
-// auto-select when the governorate changes.
-interface SubArea {
-  area_name: string;
-  fee: number;
-  is_default?: boolean;
-}
-
 const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
   const { items, totalPrice, clearCart, removeFromCart } = useCart();
   const { products } = useProducts();
@@ -99,8 +91,11 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
   const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState(0);
   const [deliveryFees, setDeliveryFees] = useState<Record<string, number>>({});
   const [vodafoneCashNumber, setVodafoneCashNumber] = useState(DEFAULT_VODAFONE_CASH_NUMBER);
-  const [subAreas, setSubAreas] = useState<SubArea[]>([]);
+  const [subAreas, setSubAreas] = useState<{ area_name: string; fee: number; city_id: string | null }[]>([]);
   const [selectedSubArea, setSelectedSubArea] = useState('');
+  const [cities, setCities] = useState<{ id: string; city_name: string; fee: number }[]>([]);
+  const [selectedCityId, setSelectedCityId] = useState<string>('');
+  const [useCustomCity, setUseCustomCity] = useState(false);
   const [branchPickupEnabled, setBranchPickupEnabled] = useState(false);
   const [branchAddress, setBranchAddress] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -158,50 +153,90 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
     }
   }, [isPickup, form]);
 
-  // Fetch sub-areas when governorate changes.
-  // If one of them is marked is_default, auto-select it instead of
-  // leaving the customer on "no sub-area / general price".
+  // Fetch cities + sub-areas when governorate changes
   useEffect(() => {
-    const fetchSubAreas = async () => {
+    const fetchGovernorateData = async () => {
       if (!selectedGovernorate) {
         setSubAreas([]);
         setSelectedSubArea('');
+        setCities([]);
+        setSelectedCityId('');
+        setUseCustomCity(false);
         return;
       }
-      const { data } = await supabase
-        .from('delivery_sub_areas')
-        .select('area_name, fee, is_default')
-        .eq('governorate', selectedGovernorate);
 
-      if (data && data.length > 0) {
-        const areas = data.map((d) => ({
+      const [citiesRes, subRes] = await Promise.all([
+        supabase
+          .from('delivery_cities')
+          .select('id, city_name, fee')
+          .eq('governorate', selectedGovernorate)
+          .order('city_name'),
+        supabase
+          .from('delivery_sub_areas')
+          .select('area_name, fee, city_id')
+          .eq('governorate', selectedGovernorate),
+      ]);
+
+      setCities(
+        (citiesRes.data || []).map((c) => ({ id: c.id, city_name: c.city_name, fee: Number(c.fee) }))
+      );
+      setSubAreas(
+        (subRes.data || []).map((d) => ({
           area_name: d.area_name,
           fee: Number(d.fee),
-          is_default: !!d.is_default,
-        }));
-        setSubAreas(areas);
-
-        const defaultArea = areas.find((a) => a.is_default);
-        setSelectedSubArea(defaultArea ? defaultArea.area_name : '');
-      } else {
-        setSubAreas([]);
-        setSelectedSubArea('');
-      }
+          city_id: (d as { city_id: string | null }).city_id ?? null,
+        }))
+      );
+      setSelectedCityId('');
+      setSelectedSubArea('');
+      setUseCustomCity(false);
     };
-    fetchSubAreas();
+    fetchGovernorateData();
   }, [selectedGovernorate]);
+
+  // When user picks a city from the list, mirror its name into the form's city field
+  useEffect(() => {
+    if (!selectedCityId) return;
+    const city = cities.find((c) => c.id === selectedCityId);
+    if (city) {
+      form.setValue('city', city.city_name, { shouldValidate: true });
+      setSelectedSubArea('');
+    }
+  }, [selectedCityId, cities, form]);
 
   // Check if free delivery applies
   const isFreeDelivery = freeDeliveryThreshold > 0 && totalPrice >= freeDeliveryThreshold;
-  
-  // Calculate actual delivery fee based on governorate and (optional) sub-area override
+
+  // Sub-areas that belong to the currently selected city (generic: any city with sub-areas)
+  const selectedCity = cities.find((c) => c.id === selectedCityId) || null;
+  const citySubAreas = selectedCity
+    ? subAreas.filter((a) => a.city_id === selectedCity.id)
+    : [];
+
+  // Calculate actual delivery fee: governorate base, optionally overridden by a city + sub-area rule
   const getDeliveryFee = () => {
     if (isPickup) return 0;
     if (isFreeDelivery) return 0;
     if (!selectedGovernorate) return 0;
     const baseFee = deliveryFees[selectedGovernorate] ?? 0;
+
+    // City-based discounted fee (generic across governorates)
+    if (selectedCity) {
+      // If the city has sub-areas defined, the discounted fee only applies when
+      // the customer's area is in that list. Selecting "not in list" reverts to base.
+      if (citySubAreas.length > 0) {
+        if (selectedSubArea && citySubAreas.some((a) => a.area_name === selectedSubArea)) {
+          return selectedCity.fee;
+        }
+        return baseFee;
+      }
+      // No sub-areas defined for this city → the city fee applies directly
+      return selectedCity.fee;
+    }
+
+    // Legacy behaviour: sub-areas defined at governorate level (no city link)
     if (selectedSubArea) {
-      const area = subAreas.find((a) => a.area_name === selectedSubArea);
+      const area = subAreas.find((a) => a.area_name === selectedSubArea && !a.city_id);
       if (area) return area.fee;
     }
     return baseFee;
@@ -513,6 +548,9 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
       setTransferImagePreview(null);
       setSelectedSubArea('');
       setSubAreas([]);
+      setCities([]);
+      setSelectedCityId('');
+      setUseCustomCity(false);
       try {
         localStorage.removeItem('hw_last_order_v1');
       } catch { /* ignore */ }
@@ -785,7 +823,49 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
                           <FormItem>
                             <FormLabel className="text-right block">المدينة</FormLabel>
                             <FormControl>
-                              <Input placeholder="أدخل المدينة" className="text-right" {...field} />
+                              {cities.length > 0 && !useCustomCity ? (
+                                <Select
+                                  value={selectedCityId || (field.value ? '__other__' : '')}
+                                  onValueChange={(v) => {
+                                    if (v === '__other__') {
+                                      setSelectedCityId('');
+                                      setSelectedSubArea('');
+                                      setUseCustomCity(true);
+                                      field.onChange('');
+                                    } else {
+                                      setSelectedCityId(v);
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="اختر المدينة" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {cities.map((c) => (
+                                      <SelectItem key={c.id} value={c.id}>
+                                        {c.city_name} — {c.fee} ج.م توصيل
+                                      </SelectItem>
+                                    ))}
+                                    <SelectItem value="__other__">مدينة أخرى</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <div className="space-y-1">
+                                  <Input placeholder="أدخل المدينة" className="text-right" {...field} />
+                                  {cities.length > 0 && (
+                                    <button
+                                      type="button"
+                                      className="text-xs text-primary underline"
+                                      onClick={() => {
+                                        setUseCustomCity(false);
+                                        field.onChange('');
+                                      }}
+                                    >
+                                      اختيار من المدن المتاحة
+                                    </button>
+                                  )}
+                                </div>
+                              )}
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -818,13 +898,42 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
                       />
                     </div>
 
-                    {/* Sub-area optional override - governorate base fee applies by default,
-                        unless one of the sub-areas is marked as default (is_default),
-                        in which case it is pre-selected automatically above. */}
-                    {subAreas.length > 0 && selectedGovernorate && (
+                    {/* Sub-area picker: appears when the picked city has defined sub-areas */}
+                    {selectedCity && citySubAreas.length > 0 && (
                       <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
                         <label className="text-sm font-medium text-right block">
-                          هل منطقتك من المناطق دي؟ <span className="text-xs font-normal text-muted-foreground">(اختياري - سعر توصيل مختلف)</span>
+                          هل منطقتك ضمن المناطق دي؟{' '}
+                          <span className="text-xs font-normal text-muted-foreground">
+                            (لو مش ضمنها، هيتم احتساب سعر المحافظة العام)
+                          </span>
+                        </label>
+                        <Select
+                          onValueChange={(v) => setSelectedSubArea(v === '__none__' ? '' : v)}
+                          value={selectedSubArea || '__none__'}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">
+                              منطقتي مش من ضمن دول ({(deliveryFees[selectedGovernorate] ?? 0).toFixed(2)} ج.م)
+                            </SelectItem>
+                            {citySubAreas.map((area) => (
+                              <SelectItem key={area.area_name} value={area.area_name}>
+                                {area.area_name} — {selectedCity.fee} ج.م توصيل
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Legacy: governorate-level sub-areas (rows without city_id) */}
+                    {!selectedCity && subAreas.filter((a) => !a.city_id).length > 0 && selectedGovernorate && (
+                      <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                        <label className="text-sm font-medium text-right block">
+                          هل منطقتك من المناطق دي؟{' '}
+                          <span className="text-xs font-normal text-muted-foreground">(اختياري - سعر توصيل مختلف)</span>
                         </label>
                         <Select
                           onValueChange={(v) => setSelectedSubArea(v === '__none__' ? '' : v)}
@@ -837,11 +946,13 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
                             <SelectItem value="__none__">
                               لا - استخدم سعر التوصيل العام ({(deliveryFees[selectedGovernorate] ?? 0).toFixed(2)} ج.م)
                             </SelectItem>
-                            {subAreas.map((area) => (
-                              <SelectItem key={area.area_name} value={area.area_name}>
-                                {area.area_name} - {area.fee} ج.م توصيل
-                              </SelectItem>
-                            ))}
+                            {subAreas
+                              .filter((a) => !a.city_id)
+                              .map((area) => (
+                                <SelectItem key={area.area_name} value={area.area_name}>
+                                  {area.area_name} - {area.fee} ج.م توصيل
+                                </SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
                       </div>
