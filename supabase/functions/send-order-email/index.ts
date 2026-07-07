@@ -16,13 +16,14 @@ const OrderItemSchema = z.object({
   name: z.string().min(1).max(200),
   price: z.number().nonnegative().finite(),
   discount: z.number().min(0).finite().optional(),
+
   quantity: z.number().int().positive().max(1000)
 });
 
 const OrderDetailsSchema = z.object({
   customer: z.object({
     name: z.string().min(2).max(100),
-    phone: z.string().regex(/^01[0125][0-9]{8}$/, 'Invalid Egyptian phone number')
+    phone: z.string().min(1).max(20)
   }),
   deliveryAddress: z.object({
     governorate: z.string().min(1).max(100),
