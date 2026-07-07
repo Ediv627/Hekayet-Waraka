@@ -23,20 +23,12 @@ import mascotWelcome from '@/assets/mascot-welcome.png';
 
 const DEFAULT_VODAFONE_CASH_NUMBER = "01012345678";
 
-// Egyptian phone number validation regex
-// Accepts formats: 01xxxxxxxxx (11 digits starting with 01)
-const egyptianPhoneRegex = /^01[0125][0-9]{8}$/;
-
+// Phone number validation: any non-empty phone accepted
 const checkoutSchema = z.object({
   customerName: z.string().min(2, 'الاسم يجب أن يكون حرفين على الأقل').max(100),
-  phone: z.string()
-    .min(11, 'رقم الهاتف يجب أن يكون 11 رقم')
-    .max(11, 'رقم الهاتف يجب أن يكون 11 رقم')
-    .regex(egyptianPhoneRegex, 'أدخل رقم هاتف مصري صحيح (01xxxxxxxxx)'),
-  phoneAlt: z.string()
-    .optional()
-    .or(z.literal(''))
-    .refine((v) => !v || egyptianPhoneRegex.test(v), { message: 'أدخل رقم هاتف مصري صحيح (01xxxxxxxxx)' }),
+  phone: z.string().min(1, 'يرجى إدخال رقم الهاتف').max(20),
+  phoneAlt: z.string().max(20).optional().or(z.literal('')),
+
   deliveryMethod: z.enum(['delivery', 'pickup']),
   governorate: z.string().optional(),
   city: z.string().optional(),
@@ -180,20 +172,16 @@ const CheckoutDialog = ({ open, onClose }: CheckoutDialogProps) => {
       setCities(
         (citiesRes.data || []).map((c) => ({ id: c.id, city_name: c.city_name, fee: Number(c.fee) }))
       );
-      const fetchedSubAreas = (subRes.data || []).map((d) => ({
-        area_name: d.area_name,
-        fee: Number(d.fee),
-        city_id: (d as { city_id: string | null }).city_id ?? null,
-      }));
-      setSubAreas(fetchedSubAreas);
-      setSelectedCityId('');
-      setUseCustomCity(false);
-
-      // اختيار "مدينة بيلا" تلقائيًا كقيمة افتراضية لو موجودة ضمن مناطق المحافظة (مستوى المحافظة، بدون city_id)
-      const defaultBellaArea = fetchedSubAreas.find(
-        (a) => a.area_name === 'مدينة بيلا' && !a.city_id
+      setSubAreas(
+        (subRes.data || []).map((d) => ({
+          area_name: d.area_name,
+          fee: Number(d.fee),
+          city_id: (d as { city_id: string | null }).city_id ?? null,
+        }))
       );
-      setSelectedSubArea(defaultBellaArea ? 'مدينة بيلا' : '');
+      setSelectedCityId('');
+      setSelectedSubArea('');
+      setUseCustomCity(false);
     };
     fetchGovernorateData();
   }, [selectedGovernorate]);
@@ -416,11 +404,9 @@ ${finalTotal.toFixed(2)} جنيه`,
       return;
     }
 
-    // Validate transfer image for Vodafone Cash
-    if (data.paymentMethod === 'vodafone_cash' && !transferImage) {
-      toast.error('يرجى رفع صورة إيصال التحويل');
-      return;
-    }
+    // Transfer image is optional for Vodafone Cash (customer can send via WhatsApp)
+
+
 
     setIsSubmitting(true);
     
@@ -996,22 +982,16 @@ ${finalTotal.toFixed(2)} جنيه`,
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
+                            <SelectItem value="__none__">
+                              لا - استخدم سعر التوصيل العام ({(deliveryFees[selectedGovernorate] ?? 0).toFixed(2)} ج.م)
+                            </SelectItem>
                             {subAreas
                               .filter((a) => !a.city_id)
-                              .sort((a, b) => {
-                                // اظهار "مدينة بيلا" في أول القائمة
-                                if (a.area_name === 'مدينة بيلا') return -1;
-                                if (b.area_name === 'مدينة بيلا') return 1;
-                                return 0;
-                              })
                               .map((area) => (
                                 <SelectItem key={area.area_name} value={area.area_name}>
                                   {area.area_name} - {area.fee} ج.م توصيل
                                 </SelectItem>
                               ))}
-                            <SelectItem value="__none__">
-                              لا - استخدم سعر التوصيل العام ({(deliveryFees[selectedGovernorate] ?? 0).toFixed(2)} ج.م)
-                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1189,8 +1169,9 @@ ${finalTotal.toFixed(2)} جنيه`,
 
                     <div>
                       <p className="text-sm font-medium text-right mb-3">
-                        ارفع صورة إيصال التحويل:
+                        ارفع صورة إيصال التحويل (اختياري):
                       </p>
+
                       
                       <input
                         type="file"
@@ -1242,7 +1223,14 @@ ${finalTotal.toFixed(2)} جنيه`,
                   </div>
                 )}
 
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-center">
+                  <p className="text-sm font-medium text-foreground">
+                    يرجى إرسال الإيصال على واتساب بعد تأكيد الطلب
+                  </p>
+                </div>
+
                 <Button
+
                   type="submit"
                   className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
                   size="lg"
